@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Eve語の文字表で学び、文章や写真の文字を魔法の演出つきでEve文字に変換できる非公式ファンツール。">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<script>window.EVE_CDN = true;</script>
+</head>
+<body>
+<title>Eve-language</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Yusei+Magic&family=Zen+Maru+Gothic:wght@500;700&display=swap">
+<style>
+/* Layout: one-screen app — glyph stage on top, controls below, tab bar pinned to the bottom like a spellbook's index tabs. */
+:root {
+  --night: #0e0f24;      /* page ground: ink-blue night */
+  --night-2: #181a3a;    /* raised surface */
+  --night-3: #23264d;    /* control surface */
+  --moon: #eef0ff;       /* glyph ink, main text */
+  --mist: #a3a6cf;       /* secondary text */
+  --line: rgba(238, 240, 255, .13);
+  --teal: #5fc9b8;       /* the table's letter colour */
+  --rose: #ff8fbe;       /* spell sparks */
+  --gold: #f4d68f;       /* correct / highlight */
+  --danger: #ff8a8a;
+  --f-display: "Yusei Magic", "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif;
+  --f-body: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --f-mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --tabbar-h: 64px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--night); color: var(--moon);
+  font: 500 15px/1.6 var(--f-body);
+  background-image:
+    radial-gradient(1200px 600px at 80% -10%, rgba(95, 201, 184, .10), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(255, 143, 190, .08), transparent 60%);
+  background-attachment: fixed;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--night); }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+.app {
+  max-width: 760px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 24px);
+}
+header.top { display: flex; align-items: center; gap: 12px; padding-block: 6px 14px; }
+.logo { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.logo .mark { display: flex; gap: 2px; color: var(--teal); }
+.logo .mark svg { height: 30px; }
+.logo h1 { margin: 0; font: 400 22px/1.1 var(--f-display); letter-spacing: .02em; white-space: nowrap; }
+.logo small { display: block; font: 500 11px/1.3 var(--f-body); color: var(--mist); letter-spacing: .06em; }
+.icon-btn { margin-left: auto; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--night-2); display: grid; place-items: center; }
+.icon-btn svg { width: 20px; height: 20px; }
+
+.view[hidden] { display: none !important; }
+.view { display: flex; flex-direction: column; gap: 14px; }
+
+.seg { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--night-2); border: 1px solid var(--line); gap: 4px; flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; padding: 7px 14px; border-radius: 999px; color: var(--mist); font-weight: 700; font-size: 14px; }
+.seg button[aria-pressed="true"] { background: var(--night-3); color: var(--moon); box-shadow: inset 0 0 0 1px rgba(95, 201, 184, .5); }
+
+label.lbl { font-size: 13px; color: var(--mist); letter-spacing: .04em; }
+textarea#src {
+  width: 100%; min-height: 84px; resize: vertical; border-radius: 14px; padding: 12px 14px;
+  background: var(--night-2); border: 1px solid var(--line); font-size: 17px; line-height: 1.5;
+}
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hint { font-size: 12.5px; color: var(--mist); flex: 1 1 180px; min-width: 0; }
+
+.cast {
+  position: relative; border: 0; border-radius: 999px; padding: 12px 22px 12px 18px;
+  background: linear-gradient(135deg, #3ab3a2, #6a62d8 60%, #c66aa8);
+  color: #fff; font: 400 17px/1 var(--f-display); letter-spacing: .06em;
+  display: inline-flex; align-items: center; gap: 8px;
+  box-shadow: 0 6px 24px rgba(106, 98, 216, .35);
+}
+.cast svg { width: 22px; height: 22px; }
+.cast:disabled { opacity: .55; cursor: progress; }
+.cast:not(:disabled):hover { filter: brightness(1.08); }
+.btn { border: 1px solid var(--line); background: var(--night-2); border-radius: 999px; padding: 8px 14px; font-size: 13.5px; font-weight: 700; display: inline-flex; gap: 6px; align-items: center; }
+.btn svg { width: 16px; height: 16px; }
+.btn:hover { border-color: rgba(95, 201, 184, .5); }
+
+/* ---- stage ---- */
+.stage {
+  position: relative; display: grid; border-radius: 20px; min-height: 190px;
+  background: linear-gradient(180deg, rgba(24, 26, 58, .9), rgba(14, 15, 36, .9));
+  border: 1px solid var(--line); overflow: hidden;
+}
+.stage > .layer { grid-area: 1 / 1; padding: 22px 18px; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.stage canvas.fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+.src-layer { font: 700 26px/1.5 var(--f-body); text-align: center; word-break: break-all; z-index: 2; }
+.src-layer.gone { visibility: hidden; }
+.out-layer { z-index: 1; }
+.stage .status { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font-size: 12.5px; color: var(--mist); z-index: 4; pointer-events: none; }
+
+.eve-out { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 22px; --gh: 46px; }
+.eve-out.small { --gh: 34px; gap: 10px 16px; }
+.eve-out.tiny { --gh: 26px; gap: 8px 12px; }
+.ew { display: inline-flex; align-items: flex-start; gap: 2px; }
+.gc { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+.gc svg { height: var(--gh); display: block; overflow: visible; }
+.gc .rb { font: 500 11px/1 var(--f-mono); color: var(--teal); letter-spacing: .04em; text-transform: uppercase; }
+.no-ruby .gc .rb { visibility: hidden; }
+.gc.punct { font-size: calc(var(--gh) * .6); color: var(--mist); align-self: center; }
+.gc.raw { font-size: calc(var(--gh) * .5); color: var(--mist); }
+svg .gf { fill: currentColor; fill-rule: evenodd; }
+svg .gs { fill: none; stroke: currentColor; stroke-width: 7; stroke-linejoin: round; opacity: 0; }
+.reveal svg .gs { animation: draw 0.9s ease-out both; animation-delay: var(--d, 0s); }
+.reveal svg .gf { animation: fillin 0.6s ease-out both; animation-delay: calc(var(--d, 0s) + .45s); }
+@keyframes draw { 0% { opacity: 1; stroke-dasharray: 1 1; stroke-dashoffset: 1; } 80% { opacity: 1; stroke-dasharray: 1 1; stroke-dashoffset: 0; } 100% { opacity: 0; stroke-dasharray: 1 1; stroke-dashoffset: 0; } }
+@keyframes fillin { from { opacity: 0; filter: drop-shadow(0 0 10px var(--teal)); } to { opacity: 1; filter: drop-shadow(0 0 0 transparent); } }
+.out-layer .romaji { margin-top: 14px; text-align: center; font: 500 14px/1.5 var(--f-mono); color: var(--mist); word-break: break-word; }
+.out-meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.switch { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--mist); }
+.switch input { accent-color: var(--teal); width: 16px; height: 16px; }
+.note { font-size: 12.5px; color: var(--mist); }
+.toast { position: fixed; left: 50%; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 16px); transform: translateX(-50%); background: var(--night-3); border: 1px solid var(--line); padding: 8px 16px; border-radius: 999px; font-size: 13.5px; z-index: 50; transition: opacity .3s; max-width: calc(100% - 32px); }
+.toast[hidden] { display: block !important; opacity: 0; pointer-events: none; }
+
+/* ---- reverse ---- */
+.rev-display { min-height: 120px; border-radius: 20px; border: 1px solid var(--line); background: var(--night-2); padding: 16px; display: flex; flex-direction: column; gap: 10px; justify-content: center; }
+.rev-display .eve-out { justify-content: flex-start; --gh: 38px; }
+.rev-display .placeholder { color: var(--mist); font-size: 14px; }
+.decoded { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: baseline; }
+.decoded dt { font-size: 12px; color: var(--mist); }
+.decoded dd { margin: 0; font: 500 18px/1.4 var(--f-mono); word-break: break-word; min-width: 0; }
+.decoded dd.kana { font: 700 18px/1.4 var(--f-body); }
+.keyboard { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.key { aspect-ratio: 1 / 1; max-width: 100%; border-radius: 12px; border: 1px solid var(--line); background: var(--night-2); display: grid; place-items: center; padding: 6px; color: var(--moon); }
+.key svg { width: 100%; height: 100%; }
+.key:active { background: var(--night-3); transform: scale(.96); }
+.keyrow { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 6px; margin-top: 6px; }
+.keyrow .btn { justify-content: center; border-radius: 12px; padding: 12px; }
+
+/* ---- camera ---- */
+.cam-frame { position: relative; border-radius: 20px; overflow: hidden; background: #07081a; border: 1px solid var(--line); min-height: 260px; display: grid; place-items: center; }
+.cam-frame video, .cam-frame canvas.photo { display: block; width: 100%; height: auto; max-height: 70vh; object-fit: contain; }
+.cam-frame canvas.fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.cam-empty { padding: 28px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.cam-empty p { margin: 0; color: var(--mist); font-size: 14px; max-width: 34ch; }
+.cam-empty .row { justify-content: center; }
+.reticle { position: absolute; inset: 0; pointer-events: none; display: grid; place-items: center; }
+.reticle svg { width: min(70%, 360px); height: auto; opacity: .55; animation: spin 24s linear infinite; color: var(--teal); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.cam-status { position: absolute; left: 12px; right: 12px; bottom: 12px; text-align: center; font-size: 13px; padding: 6px 12px; border-radius: 999px; background: rgba(14, 15, 36, .72); backdrop-filter: blur(6px); justify-self: center; z-index: 4; }
+.cam-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.file-btn { position: relative; overflow: hidden; }
+.file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.cam-results { display: flex; flex-direction: column; gap: 8px; }
+.cam-results .item { border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; background: var(--night-2); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cam-results .orig { font-size: 14px; }
+.cam-results .rom { font: 500 12.5px/1.4 var(--f-mono); color: var(--teal); }
+.cam-results .eve-out { justify-content: flex-start; }
+
+/* ---- learn ---- */
+.chart { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; }
+.cell { border: 1px solid var(--line); background: var(--night-2); border-radius: 14px; padding: 10px 4px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.cell svg { height: 40px; }
+.cell .lt { font: 500 13px/1 var(--f-mono); color: var(--teal); }
+.cell[aria-pressed="true"] { border-color: var(--teal); background: var(--night-3); }
+.detail { border-radius: 20px; border: 1px solid var(--line); background: var(--night-2); padding: 16px; display: grid; grid-template-columns: 120px 1fr; gap: 16px; align-items: center; }
+.detail .big { color: var(--moon); }
+.detail .big svg { width: 100%; height: auto; }
+.detail h3 { margin: 0 0 4px; font: 400 26px/1.2 var(--f-display); }
+.detail h3 span { font: 500 15px var(--f-mono); color: var(--teal); margin-left: 8px; }
+.detail p { margin: 0; color: var(--mist); font-size: 13.5px; }
+.detail .ex { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+.detail .ex .eve-out { justify-content: flex-start; }
+.detail .ex-item { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; }
+.detail > div { min-width: 0; }
+.detail .ex .eve-out, .quiz .prompt .eve-out { max-width: 100%; }
+.detail .ex .ew, .quiz .prompt .ew { flex-wrap: wrap; }
+.detail .ex-title { font-weight: 700; font-size: 14.5px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.detail .ex-kind { font-size: 11px; color: var(--mist); border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; font-weight: 500; }
+.detail .ex-more { align-self: flex-start; margin-top: 4px; padding: 5px 12px; font-size: 12.5px; }
+.gc.hl svg { color: var(--teal); filter: drop-shadow(0 0 6px rgba(95, 201, 184, .6)); }
+.gc.hl .rb { color: var(--gold); }
+.opt.opt-title { font: 700 16px/1.3 var(--f-body); display: flex; flex-direction: column; gap: 4px; text-align: center; }
+.opt.opt-title small { font: 500 10.5px/1.2 var(--f-mono); color: var(--mist); letter-spacing: .04em; }
+
+.quiz { border-radius: 20px; border: 1px solid var(--line); background: var(--night-2); padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.quiz .qhead { display: flex; justify-content: space-between; font-size: 13px; color: var(--mist); font-variant-numeric: tabular-nums; }
+.quiz .prompt { min-height: 96px; display: grid; place-items: center; text-align: center; }
+.quiz .prompt .q-letter { font: 400 54px/1 var(--f-mono); color: var(--teal); }
+.quiz .prompt > svg { height: 80px; }
+.quiz .prompt .eve-out { --gh: 38px; gap: 12px 20px; }
+.quiz .ask { text-align: center; font-size: 14px; color: var(--mist); margin: 0; }
+.opts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.opt { border: 1px solid var(--line); background: var(--night-3); border-radius: 14px; padding: 12px; min-height: 64px; display: grid; place-items: center; font: 500 20px/1.2 var(--f-mono); color: var(--moon); }
+.opt svg { height: 44px; }
+.opt.ok { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; color: var(--gold); }
+.opt.ng { border-color: var(--danger); color: var(--danger); opacity: .8; }
+.quiz .end { text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.quiz .end .score { font: 400 44px/1 var(--f-display); }
+.quiz .end .score small { font-size: 18px; color: var(--mist); }
+.feedback { text-align: center; min-height: 1.6em; font-size: 14px; }
+
+/* ---- tab bar ---- */
+nav.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  padding-left: max(8px, env(safe-area-inset-left, 0px)); padding-right: max(8px, env(safe-area-inset-right, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: rgba(14, 15, 36, .92); backdrop-filter: blur(10px); border-top: 1px solid var(--line);
+}
+nav.tabs .in { max-width: 520px; margin: 0 auto; height: var(--tabbar-h); display: grid; grid-template-columns: repeat(3, 1fr); }
+nav.tabs a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: var(--mist); font-size: 12px; font-weight: 700; }
+nav.tabs a svg { width: 24px; height: 24px; }
+nav.tabs a[aria-current="page"] { color: var(--teal); }
+footer.credit { font-size: 11.5px; color: var(--mist); text-align: center; padding-top: 8px; }
+
+@media (max-width: 420px) {
+  .detail { grid-template-columns: 88px 1fr; }
+  .eve-out { --gh: 38px; gap: 12px 16px; }
+  .src-layer { font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reticle svg { animation: none; }
+  .reveal svg .gs { animation: none; }
+  .reveal svg .gf { animation: fillin .3s both; }
+}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="logo">
+      <span class="mark" id="logoMark" aria-hidden="true"></span>
+      <div><h1>Eve-language</h1><small>非公式ファンメイド</small></div>
+    </div>
+    <button class="icon-btn" id="soundBtn" type="button" aria-pressed="true" aria-label="効果音">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="on" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path class="off" d="M17 9l5 6M22 9l-5 6" hidden/></svg>
+    </button>
+  </header>
+
+  <!-- 変換 -->
+  <section class="view" id="v-convert" aria-label="変換">
+    <div class="seg" role="group" aria-label="変換の向き">
+      <button type="button" id="dirFwd" aria-pressed="true">ことば → Eve語</button>
+      <button type="button" id="dirRev" aria-pressed="false">Eve語 → ことば</button>
+    </div>
+
+    <div id="fwd" class="view">
+      <label class="lbl" for="src">変えたいことば</label>
+      <textarea id="src" maxlength="140">よるのまほう</textarea>
+      <div class="row">
+        <span class="hint">日本語（漢字もOK）・英語・数字。日本語はローマ字に直してからEve文字にします。</span>
+        <button class="cast" id="cast" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20 15 9"/><path d="M15 9l2-2"/><path d="M18 2v3M21 5h-3M16.5 3.5l3 3"/><circle cx="9" cy="4" r=".6" fill="currentColor"/><circle cx="20" cy="12" r=".6" fill="currentColor"/></svg>
+          魔法をかける
+        </button>
+      </div>
+      <div class="stage" id="stage">
+        <canvas class="fx" id="stageFx"></canvas>
+        <div class="layer src-layer gone" id="srcLayer" aria-hidden="true"></div>
+        <div class="layer out-layer" id="outLayer" aria-live="polite">
+          <div class="eve-out" id="eveOut"></div>
+          <div class="romaji" id="romajiOut"></div>
+        </div>
+        <div class="status" id="stageStatus"></div>
+      </div>
+      <div class="out-meta">
+        <label class="switch"><input type="checkbox" id="rubyToggle" checked> 文字の下にアルファベットを表示</label>
+        <div class="row">
+          <button class="btn" id="copyRomaji" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>ローマ字をコピー</button>
+          <button class="btn" id="saveImg" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>画像で保存</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="rev" class="view" hidden>
+      <div class="rev-display">
+        <div class="eve-out" id="revOut"></div>
+        <span class="placeholder" id="revPh">下のEve文字キーをタップして入力してください</span>
+      </div>
+      <dl class="decoded">
+        <dt>アルファベット</dt><dd id="revLatin">—</dd>
+        <dt>かな読み（推定）</dt><dd class="kana" id="revKana">—</dd>
+      </dl>
+      <div>
+        <div class="keyboard" id="keyboard"></div>
+        <div class="keyrow">
+          <button class="btn" type="button" id="kClear">クリア</button>
+          <button class="btn" type="button" id="kSpace">スペース</button>
+          <button class="btn" type="button" id="kBack" aria-label="1文字消す">⌫</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- カメラ -->
+  <section class="view" id="v-camera" aria-label="カメラ" hidden>
+    <div class="cam-frame" id="camFrame">
+      <video id="video" playsinline muted hidden></video>
+      <canvas class="photo" id="photo" hidden></canvas>
+      <canvas class="fx" id="camFx"></canvas>
+      <div class="reticle" id="reticle" hidden><svg viewBox="0 0 200 200" fill="none" stroke="currentColor"><circle cx="100" cy="100" r="96" stroke-width="1"/><circle cx="100" cy="100" r="84" stroke-width=".6" stroke-dasharray="2 6"/><path d="M100 4v14M100 182v14M4 100h14M182 100h14" stroke-width="1.2"/></svg></div>
+      <div class="cam-empty" id="camEmpty">
+        <p>看板や本の文字をうつして魔法をかけると、写真の上で文字がEve語に変わります。</p>
+        <div class="row">
+          <button class="cast" type="button" id="camStart">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>カメラを起動
+          </button>
+          <span class="btn file-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg>写真を撮る・選ぶ<input type="file" id="fileIn" accept="image/*" capture="environment" aria-label="写真を撮る・選ぶ"></span>
+          <button class="btn" type="button" id="sampleBtn">見本の写真で試す</button>
+        </div>
+      </div>
+      <div class="cam-status" id="camStatus" hidden></div>
+    </div>
+    <div class="cam-controls">
+      <div class="seg" role="group" aria-label="読み取る文字">
+        <button type="button" id="ocrJa" aria-pressed="true">日本語</button>
+        <button type="button" id="ocrEn" aria-pressed="false">English</button>
+      </div>
+      <div class="row">
+        <button class="btn" type="button" id="camRetry" hidden>撮り直す</button>
+        <button class="btn" type="button" id="camSave" hidden>画像で保存</button>
+        <button class="cast" type="button" id="camCast" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 20 15 9"/><path d="M15 9l2-2"/><path d="M18 2v3M21 5h-3M16.5 3.5l3 3"/></svg>魔法をかける
+        </button>
+      </div>
+    </div>
+    <p class="note" id="camNote">文字の読み取りはこの端末の中で行います。写真はどこにも送信されません。初回は読み取り用データ（約3〜5MB）を読み込みます。</p>
+    <div class="cam-results" id="camResults"></div>
+  </section>
+
+  <!-- まなぶ -->
+  <section class="view" id="v-learn" aria-label="まなぶ" hidden>
+    <div class="seg" role="group" aria-label="学び方">
+      <button type="button" id="lChart" aria-pressed="true">文字表</button>
+      <button type="button" id="lQuiz" aria-pressed="false">クイズ</button>
+    </div>
+    <div id="chartPane" class="view">
+      <div class="detail" id="detail"></div>
+      <div class="chart" id="chart"></div>
+      <p class="note">Eve語はアルファベット26文字と数字10文字の置きかえです。日本語はローマ字にしてから書きます（例：廻廻奇譚 → KAIKAI KITAN）。</p>
+    </div>
+    <div id="quizPane" class="view" hidden>
+      <div class="seg" role="group" aria-label="クイズの種類">
+        <button type="button" id="qmChar" aria-pressed="true">1文字</button>
+        <button type="button" id="qmWord" aria-pressed="false">単語</button>
+      </div>
+      <div class="quiz" id="quiz"></div>
+    </div>
+  </section>
+
+  <footer class="credit">Eve語の対応表は、ファンの間で共有されている画像（作者不明）をもとにしています。アーティスト本人・関係各社とは関係のない非公式ツールです。作者の方や関係者の方からご連絡があれば、すぐに修正・削除します。</footer>
+</div>
+
+<nav class="tabs" aria-label="メニュー">
+  <div class="in">
+    <a href="#convert" data-view="convert" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h13l-3-3M20 17H7l3 3"/></svg>変換</a>
+    <a href="#camera" data-view="camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>カメラ</a>
+    <a href="#learn" data-view="learn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 5.5C6.5 4 9.5 4 12 6c2.5-2 5.5-2 8-.5V19c-2.5-1.5-5.5-1.5-8 .5-2.5-2-5.5-2-8-.5z"/><path d="M12 6v13.5"/></svg>まなぶ</a>
+  </div>
+</nav>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="glyphs.js"></script>
+<script src="vendor/kuromoji.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
